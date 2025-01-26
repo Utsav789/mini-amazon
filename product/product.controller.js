@@ -1,33 +1,30 @@
 import express from "express";
 import { productSchema } from "./product.validation.js";
 import ProductTable from "./product.model.js";
-import { isSeller, isUser } from "../middleware/authentication.middleware.js";
+import {
+  isBuyer,
+  isSeller,
+  isUser,
+} from "../middleware/authentication.middleware.js";
 import { validateMongoIdFromReqParams } from "../middleware/validate.mongo.id.js";
+import { validateReqBody } from "../middleware/validate.req.body.middleware.js";
+import { paginationSchema } from "../shared/pagination.schema.js";
 
 const router = express.Router();
 
+// add product for user 
 router.post(
   "/product/add",
   isSeller,
-  async (req, res, next) => {
-    try {
-      //? validate data => req.body using yup system
-      const validateData = await productSchema.validate(req.body);
-
-      req.body = validateData;
-      //? call next function
-      next();
-    } catch (error) {
-      //? if validation fails send error message
-      return res.status(400).send({ message: error.message });
-    }
-  },
+  validateReqBody(productSchema),
   async (req, res) => {
     try {
       //? extract new product from req.body
       const newProduct = req.body;
+      const sellerId = req.loggedInId;
       //? create product
-      await ProductTable.create(newProduct);
+      await ProductTable.create({ ...newProduct, sellerId });
+
       //? send response
       return res.status(201).send({ message: "Product add successfully" });
     } catch (error) {
@@ -37,17 +34,115 @@ router.post(
   }
 );
 
+// get product for any user
 router.get(
   "/product/detail/:id",
   isUser,
   validateMongoIdFromReqParams,
   async (req, res) => {
-    return res.status(200).send({ message: "Product Detail...." });
+    // extract product id from params
+    const productId = req.params.id;
+
+    // find product by product id
+    const product = await ProductTable.findOne({ _id: productId });
+
+    //if no product throw error
+    if (!product) {
+      return res.status(404).send({ message: "Product not found" });
+    }
+
+    return res.status(200).send({ message: "success", productDetail: product });
   }
 );
 
-router.delete("/product/delete/:id",isSeller,validateMongoIdFromReqParams, async (req,res)=>{
-  return res.status(200).send({message:"product deleted"})
-})
+// list products by buyerList
+router.post(
+  "/product/buyer/list",
+  isBuyer,
+  validateReqBody(paginationSchema),
+  async (req, res) => {
+    //? extract pagination data from req.body
+    const paginationData = req.body;
+
+    const limit = paginationData.limit;
+    const page = paginationData.page;
+
+    const skip = (page - 1) * limit;
+
+    const products = await ProductTable.aggregate([
+      {
+        $match: {},
+      },
+      {
+        $skip: skip,
+      },
+      {
+        $limit: limit,
+      },
+    ]);
+
+    //? calculate page Number required
+    const totalItems = await ProductTable.find().countDocuments();
+
+    const totalPage = Math.ceil(totalItems / limit);
+
+    return res.status(200).send({
+      message: "Success",
+      productList: products,
+      totalPage,
+    });
+  }
+);
+
+// list product by seller
+router.post(
+  "/product/seller/list",
+  isSeller,
+  validateReqBody(paginationSchema),
+  async (req, res) => {
+    //? extract pagination data from req.body
+    const paginationData = req.body;
+
+    const limit = paginationData.limit;
+    const page = paginationData.page;
+
+    const skip = (page - 1) * limit;
+    const sellerId = req.loggedInId;
+
+    const products = await ProductTable.aggregate([
+      {
+        $match: {sellerId}
+      },
+      {
+        $skip: skip,
+      },
+      {
+        $limit: limit,
+      },
+      {
+        $project: {
+          sellerId: 0,
+        },
+      },
+    ]);
+
+    const totalItems = await ProductTable.find().countDocuments();
+
+    const totalPage = Math.ceil(totalItems / limit);
+
+    return res
+      .status(200)
+      .send({ message: "Success", productList: products, totalPage });
+  }
+);
+
+router.delete(
+  "/product/delete/:id",
+  isSeller,
+  validateMongoIdFromReqParams,
+  async (req, res) => {
+    return res.status(200).send({ message: "product deleted" });
+  }
+);
 
 export { router as productController };

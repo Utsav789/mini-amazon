@@ -1,4 +1,4 @@
-import mongoose from 'mongoose';
+import mongoose from "mongoose";
 
 // set rule/schema/structure
 const productSchema = new mongoose.Schema({
@@ -29,15 +29,15 @@ const productSchema = new mongoose.Schema({
     required: true,
     trim: true,
     enum: [
-      'grocery',
-      'clothing',
-      'kids',
-      'stationery',
-      'kitchen',
-      'furniture',
-      'electronics',
-      'electrical',
-      'sports',
+      "grocery",
+      "clothing",
+      "kids",
+      "stationery",
+      "kitchen",
+      "furniture",
+      "electronics",
+      "electrical",
+      "sports",
     ],
   },
   image: {
@@ -56,11 +56,15 @@ const productSchema = new mongoose.Schema({
     minlength: 10,
     maxlength: 1000,
   },
-  //    TODO: implement seller id
-  //   sellerId: mongoose.ObjectId,
+
+  sellerId: {
+    type: mongoose.ObjectId,
+    trim: true,
+    required: true,
+  },
 });
 
 // create table
-const ProductTable = mongoose.model('Product', productSchema);
+const ProductTable = mongoose.model("Product", productSchema);
 
 export default ProductTable;

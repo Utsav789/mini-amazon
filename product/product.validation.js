@@ -23,3 +23,4 @@ export  const productSchema = yup.object({
   freeShipping: yup.boolean().notRequired().default(false),
   description: yup.string().required().trim().min(10).max(1000),
 });
+
