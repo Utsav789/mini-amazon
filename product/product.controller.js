@@ -9,10 +9,11 @@ import {
 import { validateMongoIdFromReqParams } from "../middleware/validate.mongo.id.js";
 import { validateReqBody } from "../middleware/validate.req.body.middleware.js";
 import { paginationSchema } from "../shared/pagination.schema.js";
+import { isOwnerOfProduct } from "./product.middleware.js";
 
 const router = express.Router();
 
-// add product for user 
+// add product for user
 router.post(
   "/product/add",
   isSeller,
@@ -111,7 +112,7 @@ router.post(
 
     const products = await ProductTable.aggregate([
       {
-        $match: {sellerId}
+        $match: { sellerId },
       },
       {
         $skip: skip,
@@ -136,13 +137,47 @@ router.post(
   }
 );
 
+// delete product by id
 router.delete(
   "/product/delete/:id",
   isSeller,
   validateMongoIdFromReqParams,
+  isOwnerOfProduct,
   async (req, res) => {
-    return res.status(200).send({ message: "product deleted" });
+    const productId = req.params.id;
+
+    //? deleting product
+    await ProductTable.deleteOne({ _id: productId });
+
+    return res.status(200).send({ message: "product is deleted Successfully" });
   }
 );
 
+// edit product
+router.put(
+  "/product/edit/:id",
+  isSeller,
+  validateMongoIdFromReqParams,
+  isOwnerOfProduct,
+  validateReqBody(productSchema),
+  async (req, res) => {
+    //extract product id from req.params
+    const productId = req.params.id;
+    console.log("hi");
+    const product = await ProductTable.findOne({ _id: productId });
+    // extract new values from req body
+
+    const newValues = req.body;
+
+    await ProductTable.updateOne(
+      { _id: productId },
+      {
+        $set: {
+          ...newValues,
+        },
+      }
+    );
+    return res.status(200).send({ message: "product is updated Successfully" });
+  }
+);
 export { router as productController };

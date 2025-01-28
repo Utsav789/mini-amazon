@@ -6,6 +6,8 @@ export const validateReqBody = (validationSchema) => {
       // console.log("hello");
 
       req.body = validateData;
+      
+
       next();
     } catch (error) {
       return res.status(400).send({ message: error.message });
