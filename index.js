@@ -1,7 +1,8 @@
-import express from 'express';
-import connectDB from './db.connection.js';
-import { userController } from './user/user.controller.js';
-import { productController } from './product/product.controller.js';
+import express from "express";
+import connectDB from "./db.connection.js";
+import { userController } from "./user/user.controller.js";
+import { productController } from "./product/product.controller.js";
+import { cartController } from "./cart/cart.controller.js";
 
 // backend app
 const app = express();
@@ -17,6 +18,7 @@ await connectDB();
 // register routes/controller
 app.use(userController);
 app.use(productController);
+app.use(cartController);
 
 // network port
 const PORT = 8000;
